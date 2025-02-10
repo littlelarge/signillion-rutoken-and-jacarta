@@ -1,0 +1,102 @@
+buildscript {
+    ext.kotlin_version = '1.9.0'
+}
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+
+dependencies {
+    // RuToken dependencies
+    implementation 'ru.rutoken.rtpcscbridge:rtpcscbridge:1.2.0'
+    implementation("ru.rutoken.pkcs11wrapper:pkcs11wrapper:4.2.0") { transitive = false }
+    implementation("ru.rutoken:pkcs11jna:4.1.0") { transitive = false }
+
+    // JaCarta dependencies
+    implementation fileTree(dir: '../jacartaLibs', include: ['*.aar', '*.jar'], exclude: [])
+
+    implementation 'net.java.dev.jna:jna:5.3.1@aar'
+
+    // Остальные зависимости
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.9'
+}
+
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) {
+    flutterVersionCode = "1"
+}
+
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) {
+    flutterVersionName = "1.0"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "com.rutoken_and_jacarta"
+    compileSdk = 34
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    packagingOptions {
+        pickFirst '**/libjna.so'
+        pickFirst '**/libjnidispatch.so'
+    }
+
+    defaultConfig {
+        applicationId "com.rutoken_and_jacarta"
+        minSdk = 24
+        targetSdk = 33
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+        multiDexEnabled true
+    }
+
+    signingConfigs {
+        release {
+            keyAlias = keystoreProperties['keyAlias']
+            keyPassword = keystoreProperties['keyPassword']
+            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword = keystoreProperties['storePassword']
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.release
+            shrinkResources true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'),
+                    'proguard-rules.pro'
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
